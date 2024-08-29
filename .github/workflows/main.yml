@@ -1,0 +1,48 @@
+name: Go CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.20'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.mod') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: go mod download || exit 1
+
+    - name: Build
+      run: go build -v || exit 1
+
+    - name: Run
+      run: go run main.go || exit 1
+
+    - name: Run tests
+      run: go test -v || exit 1
+
+    - name: Install gosec
+      run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+    - name: Run gosec
+      run: gosec ./... || exit 1
+
+    # Optional step for linting
+    - name: Lint
+      run: go fmt ./ || exit 1
